@@ -2,15 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import './VideoChat.css';
 
-const socket = io('http://localhost:5000'); // Backend server URL
+const socket = io('https://rts-mgcs.onrender.com');
 const ROOM = 'live-room';
 
 const VideoChat = ({ role }) => {
   const localRef = useRef(null);
   const remoteRef = useRef(null);
+  const localStream = useRef(null);
   const peerRef = useRef(null);
-  const localStreamRef = useRef(null);
   const [noHost, setNoHost] = useState(false);
+  const [hostId, setHostId] = useState(null);
 
   useEffect(() => {
     if (role === 'host') {
@@ -18,11 +19,33 @@ const VideoChat = ({ role }) => {
     } else {
       viewerJoin();
     }
-  }, []);
+
+    socket.on('ice-candidate', async ({ candidate }) => {
+      if (candidate) {
+        await peerRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+
+    socket.on('offer', async ({ offer }) => {
+      if (role === 'viewer' && hostId) {
+        const peer = createPeerConnection(hostId);
+        peer.ontrack = e => {
+          remoteRef.current.srcObject = e.streams[0];
+        };
+        await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        socket.emit('answer', { to: hostId, answer });
+        peerRef.current = peer;
+      }
+    });
+
+    return () => socket.disconnect();
+  }, [hostId]);
 
   const hostJoin = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localStreamRef.current = stream;
+    localStream.current = stream;
     localRef.current.srcObject = stream;
 
     socket.emit('host-join', ROOM);
@@ -39,12 +62,6 @@ const VideoChat = ({ role }) => {
     socket.on('answer', ({ answer }) => {
       peerRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
     });
-
-    socket.on('ice-candidate', async ({ candidate }) => {
-      if (candidate) {
-        await peerRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-    });
   };
 
   const viewerJoin = () => {
@@ -54,28 +71,9 @@ const VideoChat = ({ role }) => {
       setNoHost(true);
     });
 
-    socket.on('host-available', async (hostId) => {
+    socket.on('host-available', hostSocketId => {
       setNoHost(false);
-      const peer = createPeerConnection(hostId);
-
-      peer.ontrack = event => {
-        remoteRef.current.srcObject = event.streams[0];
-      };
-
-      socket.on('offer', async ({ offer }) => {
-        await peer.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-        socket.emit('answer', { to: hostId, answer });
-      });
-
-      socket.on('ice-candidate', async ({ candidate }) => {
-        if (candidate) {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate));
-        }
-      });
-
-      peerRef.current = peer;
+      setHostId(hostSocketId);
     });
   };
 
@@ -93,15 +91,11 @@ const VideoChat = ({ role }) => {
     <div className="video-container">
       <h2 className="role-label">{role === 'host' ? 'You are Hosting' : 'You are Viewing'}</h2>
 
-      {noHost && <p className="no-host-msg">🚫 No host is currently live. Please wait or try again later.</p>}
+      {noHost && <p className="no-host-msg">🚫 No host is currently live.</p>}
 
       <div className="video-box">
-        {role === 'host' && (
-          <video ref={localRef} autoPlay muted playsInline className="video" />
-        )}
-        {role === 'viewer' && !noHost && (
-          <video ref={remoteRef} autoPlay playsInline className="video" />
-        )}
+        {role === 'host' && <video ref={localRef} autoPlay muted playsInline className="video" />}
+        {role === 'viewer' && !noHost && <video ref={remoteRef} autoPlay playsInline className="video" />}
       </div>
     </div>
   );
