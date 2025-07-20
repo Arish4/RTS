@@ -1,0 +1,31 @@
+.video-container {
+  padding: 30px;
+  text-align: center;
+}
+
+.role-label {
+  font-size: 24px;
+  color: #444;
+  margin-bottom: 20px;
+}
+
+.video-box {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.video {
+  width: 600px;
+  height: 400px;
+  background-color: black;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  object-fit: cover;
+}
+
+.no-host-msg {
+  font-size: 18px;
+  color: red;
+  margin-bottom: 20px;
+}

@@ -1,0 +1,38 @@
+.app-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f2f2f2;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.join-box {
+  text-align: center;
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+.zoom-title {
+  font-size: 32px;
+  margin-bottom: 30px;
+  color: #2d2d2d;
+}
+
+.join-btn {
+  margin: 10px;
+  padding: 12px 24px;
+  font-size: 16px;
+  border: none;
+  background: #007bff;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.join-btn:hover {
+  background: #0056b3;
+}
